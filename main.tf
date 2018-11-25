@@ -1,4 +1,3 @@
-
 # Configure the OpenStack Provider
 provider "openstack" {
   user_name   = ""
@@ -7,7 +6,7 @@ provider "openstack" {
   auth_url    = "https://172.16.1.11:5000/v3"
   region      = ""
   cacert_file = ""
-  insecure = true
+  insecure    = true
 }
 
 # Create sec grups for web server and database server
@@ -54,27 +53,47 @@ resource "openstack_networking_secgroup_rule_v2" "secgroup_db_rule_ssh" {
 
 # Create a web server
 resource "openstack_compute_instance_v2" "instance_web" {
-  name = "terraform-instance-web"
-  image_id = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
-  flavor_id = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
-  key_pair = "DEVOPS-ADMIN"
-  security_groups = ["${openstack_networking_secgroup_v2.secgroup_web.id}"]  
-  depends_on = ["openstack_compute_instance_v2.instance_db"]
+  name            = "terraform-instance-web"
+  image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
+  flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
+  key_pair        = "DEVOPS-ADMIN"
+  security_groups = ["${openstack_networking_secgroup_v2.secgroup_web.id}"]
+  depends_on      = ["openstack_compute_instance_v2.instance_db"]
+
   network {
-    name = "ExternalNet-V7"
+    name = "${var.network}"
+  }
+
+  provisioner "local-exec" {
+    command = "echo ${openstack_compute_instance_v2.instance_web.network.0.fixed_ip_v4} >> ip_address.txt"
   }
 }
 
 # Create a database server
 resource "openstack_compute_instance_v2" "instance_db" {
-  name = "terraform-instance-db"
-  image_id = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
-  flavor_id = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
-  key_pair = "DEVOPS-ADMIN"
-  security_groups = ["${openstack_networking_secgroup_v2.secgroup_db.id}"]  
+  name            = "terraform-instance-db"
+  image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
+  flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
+  key_pair        = "DEVOPS-ADMIN"
+  security_groups = ["${openstack_networking_secgroup_v2.secgroup_db.id}"]
 
   network {
-    name = "ExternalNet-V7"
+    name = "${var.network}"
   }
+
+  provisioner "local-exec" {
+    command = "echo ${openstack_compute_instance_v2.instance_db.network.0.fixed_ip_v4} > ip_address.txt"
+  }
+
 }
 
+# Outputs
+
+output "instance_db_ip" {
+  value = "${openstack_compute_instance_v2.instance_db.network.0.fixed_ip_v4}"
+}
+
+
+output "instance_web_ip" {
+  value = "${openstack_compute_instance_v2.instance_web.network.0.fixed_ip_v4}"
+}

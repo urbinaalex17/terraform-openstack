@@ -1,0 +1,1 @@
+network = "ExternalNet-V7"
