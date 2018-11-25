@@ -1,20 +1,77 @@
 
 # Configure the OpenStack Provider
 provider "openstack" {
-  user_name   = "$OS_USERNAME"
-  tenant_name = "OS_PROJECT_NAME"
-  password    = "$OS_PASSWORD"
-  auth_url    = "$OS_AUTH_URL"
-  region      = "$OS_REGION_NAME"
+  user_name   = ""
+  tenant_name = ""
+  password    = ""
+  auth_url    = "https://172.16.1.11:5000/v3"
+  region      = ""
+  cacert_file = ""
+  insecure = true
+}
+
+# Create sec grups for web server and database server
+resource "openstack_networking_secgroup_v2" "secgroup_web" {
+  name        = "secgroup-web"
+  description = "Web Server security group"
+}
+
+resource "openstack_networking_secgroup_v2" "secgroup_db" {
+  name        = "secgroup-db"
+  description = "Data Base security group"
+}
+
+# Rules for the newly created security groups
+resource "openstack_networking_secgroup_rule_v2" "secgroup_web_rule_ssh" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 22
+  port_range_max    = 22
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_web.id}"
+}
+
+resource "openstack_networking_secgroup_rule_v2" "secgroup_web_rule_http" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 80
+  port_range_max    = 80
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_web.id}"
+}
+
+resource "openstack_networking_secgroup_rule_v2" "secgroup_db_rule_ssh" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 22
+  port_range_max    = 22
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_db.id}"
 }
 
 # Create a web server
-resource "openstack_compute_instance_v2" "test-server" {
-  name = "terraform-instance"
+resource "openstack_compute_instance_v2" "instance_web" {
+  name = "terraform-instance-web"
   image_id = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
-  flavor_id = "flavor-test"
+  flavor_id = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
   key_pair = "DEVOPS-ADMIN"
-  security_groups = ["all-in-out"]  
+  security_groups = ["${openstack_networking_secgroup_v2.secgroup_web.id}"]  
+  depends_on = ["openstack_compute_instance_v2.instance_db"]
+  network {
+    name = "ExternalNet-V7"
+  }
+}
+
+# Create a database server
+resource "openstack_compute_instance_v2" "instance_db" {
+  name = "terraform-instance-db"
+  image_id = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
+  flavor_id = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
+  key_pair = "DEVOPS-ADMIN"
+  security_groups = ["${openstack_networking_secgroup_v2.secgroup_db.id}"]  
 
   network {
     name = "ExternalNet-V7"
