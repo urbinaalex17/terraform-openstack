@@ -51,15 +51,20 @@ resource "openstack_networking_secgroup_rule_v2" "secgroup_db_rule_ssh" {
   security_group_id = "${openstack_networking_secgroup_v2.secgroup_db.id}"
 }
 
+# Create a 10G volume
+resource "openstack_blockstorage_volume_v2" "vol_01" {
+  name = "terraform-volume-01"
+  size = 10
+}
 # Create a web server
 resource "openstack_compute_instance_v2" "instance_web" {
   name            = "terraform-instance-web"
   image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
   flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
-  key_pair        = "DEVOPS-ADMIN"
+  key_pair        = "${var.key-pair-openstack}"
   security_groups = ["${openstack_networking_secgroup_v2.secgroup_web.id}"]
   depends_on      = ["openstack_compute_instance_v2.instance_db"]
-
+  power_state     = "active"
   network {
     name = "${var.network}"
   }
@@ -67,17 +72,27 @@ resource "openstack_compute_instance_v2" "instance_web" {
   provisioner "local-exec" {
     command = <<EOD
     cat <<EOF > openstack_hosts
-    [webservers]
-    ${openstack_compute_instance_v2.instance_web.network.0.fixed_ip_v4}
-    [dbservers]
-    ${openstack_compute_instance_v2.instance_db.network.0.fixed_ip_v4}
-    EOF
+[webservers]
+${openstack_compute_instance_v2.instance_web.network.0.fixed_ip_v4}
+[dbservers]
+${openstack_compute_instance_v2.instance_db.network.0.fixed_ip_v4}
+[all:children]
+dbservers
+webservers
+
+EOF
     EOD
   }
 
-  provisioner "local-exec" {
-    command = "ansible -m ping -i openstack_hosts -u ${var.remote-user} --private-key=${file(var.key-pair-path)} webservers"
-  }
+#  provisioner "local-exec" {
+#    command = "ansible-playbook -i openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} $${PWD}/ansible/connection-wait.yml -e target=all"
+#  }
+}
+
+# Attach the volume 
+resource "openstack_compute_volume_attach_v2" "attached" {
+  instance_id = "${openstack_compute_instance_v2.instance_web.id}"
+  volume_id = "${openstack_blockstorage_volume_v2.vol_01.id}"
 }
 
 # Create a database server
@@ -85,7 +100,7 @@ resource "openstack_compute_instance_v2" "instance_db" {
   name            = "terraform-instance-db"
   image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
   flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
-  key_pair        = "DEVOPS-ADMIN"
+  key_pair        = "${var.key-pair-openstack}"
   security_groups = ["${openstack_networking_secgroup_v2.secgroup_db.id}"]
 
   network {

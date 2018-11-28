@@ -1,0 +1,8 @@
+[webservers]
+172.16.4.41
+[dbservers]
+172.16.4.38
+[all:children]
+dbservers
+webservers
+
