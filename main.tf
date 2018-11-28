@@ -65,7 +65,18 @@ resource "openstack_compute_instance_v2" "instance_web" {
   }
 
   provisioner "local-exec" {
-    command = "echo ${openstack_compute_instance_v2.instance_web.network.0.fixed_ip_v4} >> ip_address.txt"
+    command = <<EOD
+    cat <<EOF > openstack_hosts
+    [webservers]
+    ${openstack_compute_instance_v2.instance_web.network.0.fixed_ip_v4}
+    [dbservers]
+    ${openstack_compute_instance_v2.instance_db.network.0.fixed_ip_v4}
+    EOF
+    EOD
+  }
+
+  provisioner "local-exec" {
+    command = "ansible -m ping -i openstack_hosts -u ${var.remote-user} --private-key=${file(var.key-pair-path)} webservers"
   }
 }
 
@@ -79,10 +90,6 @@ resource "openstack_compute_instance_v2" "instance_db" {
 
   network {
     name = "${var.network}"
-  }
-
-  provisioner "local-exec" {
-    command = "echo ${openstack_compute_instance_v2.instance_db.network.0.fixed_ip_v4} > ip_address.txt"
   }
 
 }
