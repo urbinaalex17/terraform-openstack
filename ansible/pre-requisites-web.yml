@@ -1,0 +1,6 @@
+
+- hosts: '{{ target }}'
+  become: yes
+  tasks:
+  - name: Partitions Layout
+    script: /data/git/terraform-openstack/scripts/iap_jboss_partition_layout.sh '{{ device }}'

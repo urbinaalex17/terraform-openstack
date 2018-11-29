@@ -63,7 +63,6 @@ resource "openstack_compute_instance_v2" "instance_web" {
   flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
   key_pair        = "${var.key-pair-openstack}"
   security_groups = ["${openstack_networking_secgroup_v2.secgroup_web.id}"]
-  depends_on      = ["openstack_compute_instance_v2.instance_db"]
   power_state     = "active"
   network {
     name = "${var.network}"
@@ -83,10 +82,17 @@ webservers
 EOF
     EOD
   }
+}
 
-#  provisioner "local-exec" {
-#    command = "ansible-playbook -i openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} $${PWD}/ansible/connection-wait.yml -e target=all"
-#  }
+resource "null_resource" "ansible_commands" {
+  depends_on = ["openstack_compute_instance_v2.instance_web"]
+  provisioner "local-exec" {
+    command = "sleep 20 && ansible-playbook -i openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} $${PWD}/ansible/connection-wait.yml -e target=all"
+  }
+
+  provisioner "local-exec" {
+    command = "ansible-playbook -i openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} $${PWD}/ansible/pre-requisites-web.yml -e "target=webservers device=${openstack_compute_volume_attach_v2.attached.device}""
+  }
 }
 
 # Attach the volume 
@@ -108,6 +114,8 @@ resource "openstack_compute_instance_v2" "instance_db" {
   }
 
 }
+
+
 
 # Outputs
 
