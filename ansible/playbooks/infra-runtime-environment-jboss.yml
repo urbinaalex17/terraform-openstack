@@ -1,5 +1,7 @@
 ---
 - hosts: '{{target}}'
+  vars_files:
+  - roles/install-jboss-eap/vars/vault_files/jboss_management.yml
   roles:
     - install-jboss-eap
 

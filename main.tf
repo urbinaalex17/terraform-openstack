@@ -70,7 +70,7 @@ resource "openstack_compute_instance_v2" "instance_web" {
 
   provisioner "local-exec" {
     command = <<EOD
-    cat <<EOF > openstack_hosts
+    cat <<EOF > "ansible/openstack_hosts"
 [webservers]
 ${openstack_compute_instance_v2.instance_web.network.0.fixed_ip_v4}
 [dbservers]
@@ -84,19 +84,29 @@ EOF
   }
 }
 
-resource "null_resource" "ansible_commands" {
-  depends_on = ["openstack_compute_instance_v2.instance_web"]
+resource "null_resource" "ansible_playbook_01" {
+  depends_on = ["openstack_compute_volume_attach_v2.attached_instance_web"]
   provisioner "local-exec" {
-    command = "sleep 20 && ansible-playbook -i openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} $${PWD}/ansible/playbooks/connection-wait.yml -e target=all"
+    command = "sleep 20 && ansible-playbook -i ansible/openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} ansible/playbooks/connection-wait.yml -e target=all"
   }
+}
 
+resource "null_resource" "ansible_playbook_02" {
+  depends_on = ["null_resource.ansible_playbook_01"]
   provisioner "local-exec" {
-    command = "ansible-playbook -i openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} $${PWD}/ansible/playbooks/pre-requisites-web.yml -e 'target=webservers device=${openstack_compute_volume_attach_v2.attached.device}'"
+    command = "ansible-playbook -i ansible/openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} ansible/playbooks/pre-requisites-web.yml -e 'target=webservers device=${openstack_compute_volume_attach_v2.attached_instance_web.device}'"
+  }
+}  
+
+resource "null_resource" "ansible_playbook_03" {
+  depends_on = ["null_resource.ansible_playbook_02"]
+  provisioner "local-exec" {
+    command = "ansible-playbook -i ansible/openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} ansible/playbooks/infra-runtime-environment-jboss.yml -e target=webservers"
   }
 }
 
 # Attach the volume 
-resource "openstack_compute_volume_attach_v2" "attached" {
+resource "openstack_compute_volume_attach_v2" "attached_instance_web" {
   instance_id = "${openstack_compute_instance_v2.instance_web.id}"
   volume_id = "${openstack_blockstorage_volume_v2.vol_01.id}"
 }

@@ -6,10 +6,10 @@ download_dir: '/tmp'
 jboss_eap_force_remove: false
 
 # Directory location of golden image zip (remote)
-jboss_eap_golden_image_dir: "/mnt/nfs/ansible/redhat/rh_jboss_golden_images"
+jboss_eap_golden_image_dir: "/tmp"
 
 # Directory location of golden image zip (local)
-jboss_eap_golden_image_dir_local: "/etc/ansible/roles/install-jboss-eap/files"
+jboss_eap_golden_image_dir_local: "roles/install-jboss-eap/files"
 
 # Directory name of root directory inside zip
 jboss_eap_golden_image_subdir: "jboss"
@@ -85,14 +85,14 @@ jboss_eap_modcluster_multicast_address: 224.0.1.105
 jboss_eap_outbound_proxy_port: 6666
 
 # Used java version: Java 8 JDK.
-java_jdk_rpm: /mnt/nfs/ansible/jdk-8u152-linux-x64.rpm
+java_jdk_rpm: /tmp/jdk-8u152-linux-x64.rpm
 
-java_jdk_rpm_local: /etc/ansible/roles/install-jboss-eap/files/jdk-8u152-linux-x64.rpm
+java_jdk_rpm_local: roles/install-jboss-eap/files/jdk-8u152-linux-x64.rpm
 
 JAVA_OPTS: "-Djava.net.preferIPv4Stack=true -Xms512m -Xmx512m -XX:PermSize=526m -Dsun.rmi.dgc.client.gcInterval=3600000 -Dsun.rmi.dgc.server.gcInterval=3600000 -Dorg.jboss.resolver.warning=true -server -Dgw.server.mode=dev -Djboss.as.management.blocking.timeout=1200"
 
 # Timezone for the hosts and the logs
-timezone: Europe/Madrid
+timezone: America/Guatemala
 
 # Default JAVA_HOME
 jboss_java_sdk_dir: jdk1.8.0_152

@@ -36,7 +36,6 @@ echo -e "\nPartitions mounted\n"
 cat <<EOF >> /etc/fstab
 #IAP JBoss Partitions
 /dev/mapper/app-app /opt/jboss ext4 defaults 0 0
-/dev/mapper/app-bin /opt/jboss/bin ext4 defaults 0 0
 /dev/mapper/app-standalone /opt/jboss/standalone ext4 defaults 0 0
 /dev/mapper/app-log /opt/jboss/standalone/log ext4 defaults 0 0
 EOF

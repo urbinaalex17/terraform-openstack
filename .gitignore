@@ -3,4 +3,4 @@
 terraform.tfstate
 terraform.tfstate.backup
 ip_address.txt
-ansible/roles/install-jboss-eap/files/*
+ansible/playbooks/roles/install-jboss-eap/files/*
