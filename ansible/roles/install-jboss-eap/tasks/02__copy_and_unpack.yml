@@ -1,0 +1,22 @@
+---
+- name: "Ensure environment directory exists"
+  file:
+    state: directory
+    dest: "{{ item }}"
+  become: yes
+  with_items:
+  - "{{ jboss_eap_base_dir }}"
+
+- name: "Unzip archive"
+  unarchive:
+    src: "{{ jboss_eap_golden_image_dir }}/{{ jboss_eap_golden_image_name }}.zip"
+    dest: "{{ jboss_eap_base_dir }}"
+    owner: "{{ jboss_app_users.user }}"
+    group: "{{ jboss_app_users.group }}"
+    copy: false
+
+# The root directory of inner structure of the zip file has a different name than the zip file
+# so we set that below so that we can configure in this directory before moving into place
+
+- name: Create helper fact
+  set_fact: target_dir="{{ jboss_eap_base_dir }}/{{ jboss_eap_golden_image_subdir }}"

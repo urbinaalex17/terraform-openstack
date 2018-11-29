@@ -87,11 +87,11 @@ EOF
 resource "null_resource" "ansible_commands" {
   depends_on = ["openstack_compute_instance_v2.instance_web"]
   provisioner "local-exec" {
-    command = "sleep 20 && ansible-playbook -i openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} $${PWD}/ansible/connection-wait.yml -e target=all"
+    command = "sleep 20 && ansible-playbook -i openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} $${PWD}/ansible/playbooks/connection-wait.yml -e target=all"
   }
 
   provisioner "local-exec" {
-    command = "ansible-playbook -i openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} $${PWD}/ansible/pre-requisites-web.yml -e "target=webservers device=${openstack_compute_volume_attach_v2.attached.device}""
+    command = "ansible-playbook -i openstack_hosts -u ${var.remote-user} --private-key=${var.key-pair-path} $${PWD}/ansible/playbooks/pre-requisites-web.yml -e 'target=webservers device=${openstack_compute_volume_attach_v2.attached.device}'"
   }
 }
 

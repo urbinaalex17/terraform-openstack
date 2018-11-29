@@ -1,0 +1,26 @@
+---
+- name: "Check existence of the init.d script"
+  stat:
+    path: "/etc/systemd/system/{{ jboss_eap_instance_service_name }}.service"
+  register: jboss_eap_rhel_sh
+
+- name: "Stop JBoss EAP"
+  when: jboss_eap_rhel_sh.stat.exists
+  ignore_errors: yes
+  service:
+    name: "{{ jboss_eap_instance_service_name }}"
+    state: stopped
+    enabled: no
+
+- name: "Remove all instance-specific files"
+  file:
+    name: "{{ item }}"
+    state: absent
+  with_items:
+  - "{{ jboss_eap_base_dir }}/{{ jboss_eap_instance_name }}/{{ jboss_eap_golden_image_subdir }}"
+  - /etc/systemd/system/{{ jboss_eap_instance_service_name }}.service
+
+
+- name: "Reload systemd"
+  command: systemctl daemon-reload
+

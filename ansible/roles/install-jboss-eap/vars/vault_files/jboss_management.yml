@@ -1,0 +1,5 @@
+jboss_management_users:
+  - user: admin1
+    password: "adminpassword"
+  - user: admin2
+    password: "adminpass"

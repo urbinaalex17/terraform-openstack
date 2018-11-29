@@ -1,0 +1,38 @@
+---
+- name: "Copy service systemd unit file"
+  template:
+    owner: "{{ jboss_app_users.user }}"
+    group: "{{ jboss_app_users.group }}"
+    src: jboss-as-standalone.service.j2
+    dest: "/etc/systemd/system/{{ jboss_eap_instance_service_name }}.service"
+    mode: "0750"
+  register: conf_service
+
+# Reloading systemd. Should be executed here and not as a handler.
+- name: "Reload systemd"
+  when: conf_service.changed
+  command: systemctl daemon-reload
+
+- name: "Ensure JBoss EAP is running"
+  service:
+    name: "{{ jboss_eap_instance_service_name }}"
+    state: restarted
+    enabled: yes
+  become: yes
+  tags:
+  - start_eap
+
+# - name: "Install War file"
+#   shell:  "./bin/jboss-cli.sh \
+#       --controller={{ jboss_eap_bind_address }}:{{ jboss_eap_instance_management_http_port|int +  jboss_eap_instance_port_offset|int}} \
+#       --connect \
+#       --user={{ jboss_management_users[0].user }} \
+#       --password='{{ jboss_management_users[0].password }}' \
+#       --command='deploy {{ item }}'"
+#   args:
+#     chdir: "{{ jboss_eap_base_dir }}/{{ jboss_eap_instance_name }}/{{ jboss_eap_golden_image_subdir }}"
+#   when: jboss_eap_war_files|length > 0
+#   with_items: "{{ jboss_eap_war_files }}"
+#   no_log: yes
+#   tags:
+#   - install_war_file

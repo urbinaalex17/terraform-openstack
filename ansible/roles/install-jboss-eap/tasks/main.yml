@@ -1,0 +1,22 @@
+---
+
+#### Setup users and install required packages
+- include_tasks: 00__prereqs.yml
+  become: true
+
+#### Gracefully stop and remove the current instance.
+- include_tasks: 01__graceful_removal.yml
+  become: true
+  when: jboss_eap_force_remove|bool
+
+#### Copy JBoss EAP installation binaries
+- include_tasks: 02__copy_and_unpack.yml
+  become: true
+
+#### Check configuration changes in a clone directory
+- include_tasks: 03__configure.yml
+  become: true
+
+#### Create Service Account
+- include_tasks: 04__register_service.yml
+  become: true

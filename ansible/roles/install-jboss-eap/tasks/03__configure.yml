@@ -1,0 +1,82 @@
+---
+# Initial creation of the standalone directory
+
+- name: "Copy instance specific standalone.conf"
+  template:
+    owner: "{{ jboss_app_users.user }}"
+    group: "{{ jboss_app_users.group }}"
+    src: "standalone.conf.j2"
+    dest: "{{ target_dir }}/standalone/configuration/standalone.conf"
+
+- name: "Create the service and deployments directory"
+  file:
+    path: "{{ item }}"
+    owner: "{{ jboss_app_users.user }}"
+    group: "{{ jboss_app_users.group }}"
+    state: directory
+    mode: "0750"
+  with_items:
+  - "{{ target_dir }}/service"
+  - "{{ target_dir }}/log"
+  - "{{ target_dir }}/deployments"
+
+- name: "Copy instance specific standalone-full-ha.xml"
+  template:
+    owner: "{{ jboss_app_users.user }}"
+    group: "{{ jboss_app_users.group }}"
+    src: "standalone-full-ha.xml.j2"
+    dest: "{{ target_dir }}/standalone/configuration/standalone-full-ha.xml"
+
+
+- name: "jboss-eap-rhel.sh"
+  template:
+    owner: "{{ jboss_app_users.user }}"
+    group: "{{ jboss_app_users.group }}"
+    src: "jboss-eap-rhel.sh.j2"
+    dest: "{{ target_dir }}/service/jboss-eap-rhel.sh"
+    mode: "0750"
+
+- name: "Generate service systemd unit file"
+  template:
+    owner: "{{ jboss_app_users.user }}"
+    group: "{{ jboss_app_users.group }}"
+    src: jboss-as-standalone.service.j2
+    dest: "{{ target_dir }}/service/{{ jboss_eap_instance_service_name }}.service"
+    mode: "0750"
+
+- name: "Generate instance.info file"
+  template:
+    owner: "{{ jboss_app_users.user }}"
+    group: "{{ jboss_app_users.group }}"
+    src: instance.info.j2
+    dest: "{{ target_dir }}/instance.info"
+    mode: "0640"
+
+- name: "Create Management users"
+  shell: "./add-user.sh -u '{{ item.user }}' -p '{{ item.password }}' --silent"
+  args:
+    chdir: "{{ target_dir }}/bin"
+  with_items: "{{ jboss_management_users }}"
+  no_log: true
+
+- name: "Update permissions"
+  file: path={{ item }} owner={{ jboss_app_users.user }} group={{ jboss_app_users.group }} state=directory recurse=yes mode="o-rx"
+  with_items:
+    - "{{ target_dir }}"
+
+- name: "Update ACL"
+  acl:
+    name: "{{ target_dir }}"
+    etype: "{{ item.type }}"
+    state: present
+    permissions: '{{ item.permissions }}'
+    default: true
+    recursive: true
+  become: yes
+  with_items:
+  - type: user
+    permissions: rwx
+  - type: group
+    permissions: rwx
+  - type: other
+    permissions: r--

@@ -2,7 +2,7 @@
 DEVICE=$1
 DEVICE_PARTITION="$DEVICE""1"
 
-echo "\nMaking device partitions\n"
+echo -e "\nMaking device partitions\n"
 parted $DEVICE mklabel msdos
 parted $DEVICE mkpart primary 0% 100%
 parted $DEVICE toggle 1 lvm

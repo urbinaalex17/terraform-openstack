@@ -1,0 +1,15 @@
+#environment_name: "Test01"
+#jboss_eap_instance_name: "{{ environment_name }}"
+#jboss_eap_instance_port_offset: 0
+#JAVA_OPTS: "-Djava.net.preferIPv4Stack=true \
+#-Xms524m -Xmx524m -XX:PermSize=526m -Dsun.rmi.dgc.client.gcInterval=3600000 \
+#-Dsun.rmi.dgc.server.gcInterval=3600000 -Dorg.jboss.resolver.warning=true -server \
+#-Dgw.server.mode=dev -Djboss.as.management.blocking.timeout=1200"
+#jboss_eap_war_files:
+#- /mnt/nfs/ansible/billing-hub/ojdbc7.jar
+#jboss_eap_bind_address:
+  #- 192.168.1.50
+  #- 192.168.1.150
+#jboss_eap_management_bind_address:
+  #- 192.168.1.50
+  #- 192.168.1.150

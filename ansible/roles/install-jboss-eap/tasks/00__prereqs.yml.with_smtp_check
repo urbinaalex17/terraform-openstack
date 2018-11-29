@@ -1,0 +1,162 @@
+- name: "Create Check directory jboss_eap_golden_image_dir"
+  file:
+    path: "{{ jboss_eap_golden_image_dir }}"
+    owner: root
+    group: root
+    state: directory
+    mode: "0700"
+
+- name: "Copy zipped JBoss EAP distribution"
+  copy:
+    src: "{{ jboss_eap_golden_image_dir_local}}/{{ jboss_eap_golden_image_name }}.zip"
+    dest: "{{ jboss_eap_golden_image_dir }}/{{ jboss_eap_golden_image_name }}.zip"
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: "Copy java rpm"
+  copy:
+    src: "{{ java_jdk_rpm_local }}"
+    dest: "{{ java_jdk_rpm }}"
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: "Check required directories and files exist"
+  stat: path="{{ item }}"
+  register: initial_file_check
+  with_items:
+  - "{{ jboss_eap_golden_image_dir }}"
+  - "{{ jboss_eap_golden_image_dir }}/{{ jboss_eap_golden_image_name }}.zip"
+  - "{{ java_jdk_rpm }}"
+  become: yes
+
+- name: "Fail when required directories do not exist"
+  fail:
+    msg: "Required Installation File or Directory is missing: {{ item.item }}"
+  when: "{{ item.stat.exists | bool}} == false"
+  with_items: "{{ initial_file_check.results }}"
+
+- name: "Check existence of the init.d script"
+  stat:
+    path: "/etc/systemd/system/{{ jboss_eap_instance_service_name }}.service"
+  register: jboss_eap_rhel_sh
+  tags:
+  - stop_eap
+
+- name: "Stop JBoss EAP if already running"
+  when: jboss_eap_rhel_sh.stat.exists
+  service:
+    name: "{{ jboss_eap_instance_service_name }}"
+    state: stopped
+  tags:
+  - stop_eap
+
+- name: Ensure ports aren't currently being used
+  wait_for:
+    port: "{{ item }}"
+    host: "{{ jboss_eap_bind_address }}"
+    state: stopped
+    delay: 0
+    timeout: 1
+  with_items:
+  - "{{ jboss_eap_instance_cli_used_default_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_instance_management_http_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_instance_management_https_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_instance_ajp_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_instance_http_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_instance_https_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_instance_iiop_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_instance_iiop_ssl_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_jgroups_tcp_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_jgroups_tcp_fd_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_txn_recovery_environment_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_txn_status_manager_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_mail_smtp_port }}"
+  - "{{ jboss_eap_jgroups_multicast_tcp_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_modcluster_multicast_port + jboss_eap_instance_port_offset|int }}"
+  - "{{ jboss_eap_outbound_proxy_port + jboss_eap_instance_port_offset|int }}"
+
+- name: "Check existence of the init.d script"
+  stat:
+    path: "/etc/systemd/system/{{ jboss_eap_instance_service_name }}.service"
+  register: jboss_eap_rhel_sh
+  tags:
+  - stop_eap
+
+- name: "Stop JBoss EAP if already running"
+  when: jboss_eap_rhel_sh.stat.exists
+  service:
+    name: "{{ jboss_eap_instance_service_name }}"
+    state: stopped
+  tags:
+  - stop_eap
+
+- name: "Create groups for App"
+  group:
+    name: "{{ item.group }}"
+    system: yes
+    state: present
+  with_items:
+    - "{{ jboss_app_users }}"
+  become: yes
+
+- name: "Create users for App"
+  user:
+    name: "{{ item.user }}"
+    comment: "{{ item.user }} user"
+    group: "{{ item.group }}"
+    home: "{{ item.user_home }}"
+    shell: "/bin/bash"
+  become: yes
+  with_items:
+    - "{{ jboss_app_users }}"
+
+- name: "Create java directory"
+  file:
+    path: "{{ item }}"
+    owner: "{{ jboss_app_users.user }}"
+    group: "{{ jboss_app_users.group }}"
+    state: directory
+    mode: "0750"
+  with_items:
+  - "{{ jboss_eap_base_dir }}/java"
+
+
+- name: "Install JDK 1.8"
+  become: true
+  yum: name={{ item }} state=present
+  with_items:
+   - unzip
+   - bc
+   - "{{ java_jdk_rpm }}"
+
+- name: "Create JDK Symlink"
+  become: true
+  file:
+    state: link
+    owner: "{{ jboss_app_users.user }}"
+    group: "{{ jboss_app_users.group }}"
+    src: "{{ jboss_java_home }}"
+    dest: "{{ jboss_eap_base_dir }}/java/{{ jboss_java_sdk_dir }}"
+
+- name: "Update .bash_profile"
+  template:
+    src: .bash_profile.j2
+    dest: "{{ item.user_home }}/.bash_profile"
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+  register: bashrc_uploaded
+  become: true
+  with_items:
+    - "{{ jboss_app_users }}"
+
+- name: Set user limits
+  pam_limits:
+    domain: "{{ item.domain }}"
+    limit_type: "{{ item.type }}"
+    limit_item: "{{ item.item }}"
+    value: "{{ item.value }}"
+    use_max: yes
+  with_items: "{{ user_limits }}"
+  become: yes

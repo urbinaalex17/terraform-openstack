@@ -1,7 +1,7 @@
 [webservers]
-172.16.4.37
+172.16.4.45
 [dbservers]
-172.16.4.43
+172.16.4.35
 [all:children]
 dbservers
 webservers

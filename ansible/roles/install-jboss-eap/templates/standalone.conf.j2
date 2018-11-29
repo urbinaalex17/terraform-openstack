@@ -1,0 +1,67 @@
+## -*- shell-script -*- ######################################################
+##                                                                          ##
+##  JBoss EAP Bootstrap Script Configuration                                ##
+##                                                                          ##
+##############################################################################
+
+#
+# This file is optional; it may be removed if not needed.
+#
+
+#
+# Specify the maximum file descriptor limit, use "max" or "maximum" to use
+# the default, as queried by the system.
+#
+# Defaults to "maximum"
+#
+#MAX_FD="maximum"
+
+#
+# Specify the profiler configuration file to load.
+#
+# Default is to not load profiler configuration file.
+#
+#PROFILER=""
+
+#
+# Specify the location of the Java home directory.  If set then $JAVA will
+# be defined to $JAVA_HOME/bin/java, else $JAVA will be "java".
+#
+JAVA_HOME="{{ jboss_java_home }}"
+
+#
+# Specify the exact Java VM executable to use.
+#
+#JAVA=""
+
+if [ "x$JBOSS_MODULES_SYSTEM_PKGS" = "x" ]; then
+   JBOSS_MODULES_SYSTEM_PKGS="org.jboss.byteman"
+fi
+
+## Process user
+JBOSS_USER={{ jboss_app_users.user }}
+
+## JBoss EAP home directory
+JBOSS_HOME={{ target_dir }}
+
+## PID file
+JBOSS_PIDFILE={{ target_dir }}/service/jboss-eap-standalone.pid
+
+## Waiting time for returning control to SHELL, it depends upon how many applications/services that will be deployed
+STARTUP_WAIT=120
+## Waiting time for returning control to SHELL, it depends upon how many applications/services that will be undeployed
+SHUTDOWN_WAIT=30
+
+## Console and Server log files
+JBOSS_CONSOLE_LOG={{ target_dir }}/log/console.log
+
+## Standalone file
+JBOSS_CONFIG={{ jboss_eap_instance_standalone_file }}
+
+JBOSS_CONFIG_DIR=$JBOSS_HOME/standalone/configuration
+
+JBOSS_MODE=standalone
+
+JAVA_OPTS="$JAVA_OPTS {{ JAVA_OPTS}}"
+JAVA_OPTS="$JAVA_OPTS -Djboss.server.config.dir=$JBOSS_CONFIG_DIR  -Djboss.node.name={{ jboss_eap_instance_name }}"
+JAVA_OPTS="$JAVA_OPTS  -D'gw.pc.serverid={{ jboss_serverid }}'"
