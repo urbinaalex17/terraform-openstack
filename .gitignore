@@ -4,3 +4,4 @@ terraform.tfstate
 terraform.tfstate.backup
 ip_address.txt
 ansible/playbooks/roles/install-jboss-eap/files/*
+ansible/openstack_hosts

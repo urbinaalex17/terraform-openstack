@@ -20,7 +20,13 @@ resource "openstack_networking_secgroup_v2" "secgroup_db" {
   description = "Data Base security group"
 }
 
+resource "openstack_networking_secgroup_v2" "secgroup_lb" {
+  name        = "secgroup-ln"
+  description = "Load Balancer security group"
+}
+
 # Rules for the newly created security groups
+# Web Server's group rules
 resource "openstack_networking_secgroup_rule_v2" "secgroup_web_rule_ssh" {
   direction         = "ingress"
   ethertype         = "IPv4"
@@ -41,6 +47,7 @@ resource "openstack_networking_secgroup_rule_v2" "secgroup_web_rule_http" {
   security_group_id = "${openstack_networking_secgroup_v2.secgroup_web.id}"
 }
 
+# DB's group rules
 resource "openstack_networking_secgroup_rule_v2" "secgroup_db_rule_ssh" {
   direction         = "ingress"
   ethertype         = "IPv4"
@@ -49,6 +56,28 @@ resource "openstack_networking_secgroup_rule_v2" "secgroup_db_rule_ssh" {
   port_range_max    = 22
   remote_ip_prefix  = "0.0.0.0/0"
   security_group_id = "${openstack_networking_secgroup_v2.secgroup_db.id}"
+}
+
+# Load Balancer's group rules
+resource "openstack_networking_secgroup_rule_v2" "secgroup_lb_rule_ssh" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 22
+  port_range_max    = 22
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_lb.id}"
+}
+
+
+resource "openstack_networking_secgroup_rule_v2" "secgroup_lb_rule_http" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 80
+  port_range_max    = 80
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = "${openstack_networking_secgroup_v2.secgroup_lb.id}"
 }
 
 # Create a 10G volume
@@ -75,6 +104,8 @@ resource "openstack_compute_instance_v2" "instance_web" {
 ${openstack_compute_instance_v2.instance_web.network.0.fixed_ip_v4}
 [dbservers]
 ${openstack_compute_instance_v2.instance_db.network.0.fixed_ip_v4}
+[loadbalancer]
+${openstack_compute_instance_v2.instance_lb.network.0.fixed_ip_v4}
 [all:children]
 dbservers
 webservers
@@ -126,6 +157,20 @@ resource "openstack_compute_instance_v2" "instance_db" {
 }
 
 
+# Create a load balancer server
+resource "openstack_compute_instance_v2" "instance_lb" {
+  name            = "terraform-instance-lb"
+  image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
+  flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
+  key_pair        = "${var.key-pair-openstack}"
+  security_groups = ["${openstack_networking_secgroup_v2.secgroup_lb.id}"]
+
+  network {
+    name = "${var.network}"
+  }
+
+}
+
 
 # Outputs
 
@@ -133,7 +178,10 @@ output "instance_db_ip" {
   value = "${openstack_compute_instance_v2.instance_db.network.0.fixed_ip_v4}"
 }
 
-
 output "instance_web_ip" {
   value = "${openstack_compute_instance_v2.instance_web.network.0.fixed_ip_v4}"
+}
+
+output "instance_web_lb" {
+  value = "${openstack_compute_instance_v2.instance_lb.network.0.fixed_ip_v4}"
 }
