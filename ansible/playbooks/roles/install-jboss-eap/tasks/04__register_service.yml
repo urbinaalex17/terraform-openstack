@@ -13,14 +13,14 @@
   when: conf_service.changed
   command: systemctl daemon-reload
 
-- name: "Ensure JBoss EAP is running"
-  service:
-    name: "{{ jboss_eap_instance_service_name }}"
-    state: restarted
-    enabled: yes
-  become: yes
-  tags:
-  - start_eap
+#- name: "Ensure JBoss EAP is running"
+#  service:
+#    name: "{{ jboss_eap_instance_service_name }}"
+#    state: restarted
+#    enabled: yes
+#  become: yes
+#  tags:
+#  - start_eap
 
 # - name: "Install War file"
 #   shell:  "./bin/jboss-cli.sh \

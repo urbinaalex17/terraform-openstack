@@ -1,0 +1,69 @@
+---
+- hosts: '{{target}}'
+  become: yes
+  vars:
+    pathiap: "/var/iap"
+    pathinstall: "{{pathrepo}}/services/LoadBalancer"
+  tasks:
+   - name: Install tools
+     yum:
+       name: "{{item}}"
+       state: latest
+     with_items:
+       - haproxy
+       - keepalived
+       - psmisc
+   - name: Set sysctl params
+     sysctl:
+       name: net.ipv4.ip_nonlocal_bind
+       value: 1
+       state: present
+   - name: build directory
+     file:
+       path: "{{pathiap}}/{{item}}"
+       state: directory
+       recurse: yes
+       owner: root
+       group: root
+     with_items:
+       - bin
+       - config
+       - logs
+   - name: Install ha-proxy configuration
+     copy:
+       src: "{{pathinstall}}/etc/haproxy/haproxy.cfg"
+       dest: "/etc/haproxy/haproxy.cfg"
+       owner: root
+       group: root
+       mode: 0644
+   - name: Install ha-proxy logging
+     copy:
+       src: "{{pathinstall}}/etc/logrotate.d/haproxy"
+       dest: "/etc/logrotate.d/haproxy"
+       owner: root
+       group: root
+       mode: 0644
+   - name: Install KeepAlived
+     copy:
+       src: "{{pathinstall}}/etc/keepalived/keepalived.conf"
+       dest: "/etc/keepalived.conf"
+       owner: root
+       group: root
+       mode: 0644
+   - name: Install scripts
+     copy:
+       src: "{{pathinstall}}/bin/{{item}}"
+       dest: "{{pathiap}}/bin/{{item}}"
+       owner: root
+       group: root
+       mode: 0755
+     with_items:
+       - notify-keepalived.sh
+   - name: Restart services
+     systemd:
+       state: restarted
+       name: "{{item}}"
+     with_items:
+       - haproxy.service
+       - keepalived.service
+       - rsyslog

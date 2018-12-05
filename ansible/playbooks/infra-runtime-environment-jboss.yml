@@ -2,6 +2,14 @@
 - hosts: '{{target}}'
   vars_files:
   - roles/install-jboss-eap/vars/vault_files/jboss_management.yml
+  become: yes
+  pre_tasks:
+  - name: Install lvm package
+    yum:
+      name: lvm2
+      state: latest
+  - name: Partitions Layout
+    script: /data/git/terraform-openstack/scripts/iap_jboss_partition_layout.sh '{{ device }}'
   roles:
     - install-jboss-eap
 
