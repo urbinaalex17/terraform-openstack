@@ -21,7 +21,7 @@ resource "openstack_networking_secgroup_v2" "secgroup_db" {
 }
 
 resource "openstack_networking_secgroup_v2" "secgroup_lb" {
-  name        = "secgroup-ln"
+  name        = "secgroup-lb"
   description = "Load Balancer security group"
 }
 
@@ -122,6 +122,57 @@ resource "openstack_compute_volume_attach_v2" "attached_instance_web_01" {
   volume_id = "${openstack_blockstorage_volume_v2.vol_01.id}"
 }
 
+########## NETWORK PORTS
+
+# Port for the Load Balancer 1
+# Public
+resource "openstack_networking_port_v2" "port_lb_01" {
+  name = "port_lb_01"
+  network_id = "${var.network-id}"
+  admin_state_up  = "true"
+  security_group_ids = ["${openstack_networking_secgroup_v2.secgroup_lb.id}","c301ecdf-a708-4b7f-ac5f-c0e06e8ff91c"] 
+  allowed_address_pairs {
+    ip_address = "${openstack_networking_port_v2.port_lb_vip.all_fixed_ips.0}"
+  }
+}
+
+# Private
+resource "openstack_networking_port_v2" "port_lb_01_priv" {
+  name = "port_lb_01_priv"
+  network_id = "${var.network-internal-id}"
+  admin_state_up  = "true"
+  security_group_ids = ["${openstack_networking_secgroup_v2.secgroup_lb.id}","c301ecdf-a708-4b7f-ac5f-c0e06e8ff91c"] 
+}
+
+# Port for the Load Balancer 2
+# Public
+resource "openstack_networking_port_v2" "port_lb_02" {
+  name = "port_lb_02"
+  network_id = "${var.network-id}"
+  admin_state_up  = "true"
+  security_group_ids = ["${openstack_networking_secgroup_v2.secgroup_lb.id}","c301ecdf-a708-4b7f-ac5f-c0e06e8ff91c"] 
+  allowed_address_pairs {
+    ip_address = "${openstack_networking_port_v2.port_lb_vip.all_fixed_ips.0}"
+  }
+}
+
+# Private
+resource "openstack_networking_port_v2" "port_lb_02_priv" {
+  name = "port_lb_02_priv"
+  network_id = "${var.network-internal-id}"
+  admin_state_up  = "true"
+  security_group_ids = ["${openstack_networking_secgroup_v2.secgroup_lb.id}","c301ecdf-a708-4b7f-ac5f-c0e06e8ff91c"] 
+}
+
+# VIP Port shared between the two LB instances
+resource "openstack_networking_port_v2" "port_lb_vip" {
+  name = "port_vip_lb"
+  network_id = "${var.network-id}"
+  admin_state_up  = "true"
+  security_group_ids = ["${openstack_networking_secgroup_v2.secgroup_lb.id}","c301ecdf-a708-4b7f-ac5f-c0e06e8ff91c"]
+
+}
+
 ########## CREATE INSTANCES
 
 # Create a web server
@@ -152,6 +203,57 @@ EOF
   }
 }
 
+
+# Create a database server
+resource "openstack_compute_instance_v2" "instance_db_01" {
+  name            = "terraform-instance-db"
+  image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
+  flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
+  key_pair        = "${var.key-pair-openstack}"
+  security_groups = ["${openstack_networking_secgroup_v2.secgroup_db.id}"]
+
+  network {
+    name = "${var.network}"
+  }
+
+}
+
+
+# Create a load balancer instances
+resource "openstack_compute_instance_v2" "instance_lb_01" {
+  name            = "terraform-instance-lb-01"
+  image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
+  flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
+  key_pair        = "${var.key-pair-openstack}"
+  security_groups = ["${openstack_networking_secgroup_v2.secgroup_lb.id}"]
+
+  network {
+    port = "${openstack_networking_port_v2.port_lb_01.id}"
+  }
+
+  network {
+    port = "${openstack_networking_port_v2.port_lb_01_priv.id}"
+  }
+
+}
+
+resource "openstack_compute_instance_v2" "instance_lb_02" {
+  name            = "terraform-instance-lb-02"
+  image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
+  flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
+  key_pair        = "${var.key-pair-openstack}"
+  security_groups = ["${openstack_networking_secgroup_v2.secgroup_lb.id}"]
+
+  network {
+    port = "${openstack_networking_port_v2.port_lb_02.id}"
+  }
+
+  network {
+    port = "${openstack_networking_port_v2.port_lb_02_priv.id}"
+  }
+
+}
+
 ########## ANSIBLE PLAYBOOKS
 
 #Check connectivity prior to execute playbooks
@@ -178,81 +280,6 @@ resource "null_resource" "ansible_playbook_03" {
   }
 }
 
-
-
-# Create a database server
-resource "openstack_compute_instance_v2" "instance_db_01" {
-  name            = "terraform-instance-db"
-  image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
-  flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
-  key_pair        = "${var.key-pair-openstack}"
-  security_groups = ["${openstack_networking_secgroup_v2.secgroup_db.id}"]
-
-  network {
-    name = "${var.network}"
-  }
-
-}
-
-
-# Create a load balancer instances
-resource "openstack_compute_instance_v2" "instance_lb_01" {
-  name            = "terraform-instance-lb"
-  image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
-  flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
-  key_pair        = "${var.key-pair-openstack}"
-  security_groups = ["${openstack_networking_secgroup_v2.secgroup_lb.id}"]
-
-  network {
-    port = "${openstack_networking_port_v2.port_lb_01.id}"
-  }
-
-}
-
-resource "openstack_compute_instance_v2" "instance_lb_02" {
-  name            = "terraform-instance-lb-passive"
-  image_id        = "074263c3-fa70-41d7-88a6-ed83eca7dc03"
-  flavor_id       = "0ff2705f-a6b5-4709-af68-7bac4e711d16"
-  key_pair        = "${var.key-pair-openstack}"
-  security_groups = ["${openstack_networking_secgroup_v2.secgroup_lb.id}"]
-
-  network {
-    name = "${openstack_networking_port_v2.port_lb_02.id}"
-  }
-
-}
-
-########## NETWORK PORTS
-
-# Port for the Load Balancer 1
-resource "openstack_networking_port_v2" "port_lb_01" {
-  name = "port_lb_01"
-  network_id = "${var.network-id}"
-  admin_state_up  = "true"
-  
-  allowed_address_pairs {
-    ip_address = "${openstack_networking_port_v2.port_lb_vip.all_fixed_ips.0}"
-  }
-}
-
-
-# Port for the Load Balancer 2
-resource "openstack_networking_port_v2" "port_lb_02" {
-  name = "port_lb_02"
-  network_id = "${var.network-id}"
-  admin_state_up  = "true"
-  
-  allowed_address_pairs {
-    ip_address = "${openstack_networking_port_v2.port_lb_vip.all_fixed_ips.0}"
-  }
-}
-
-# VIP Port shared between the two LB instances
-resource "openstack_networking_port_v2" "port_lb_vip" {
-  name = "port_vip_lb"
-  network_id = "${var.network-id}"
-  admin_state_up  = "true"
-}
 
 ########## OUTPUTS
 

@@ -46,7 +46,7 @@
    - name: Install KeepAlived
      copy:
        src: "{{pathinstall}}/etc/keepalived/keepalived.conf"
-       dest: "/etc/keepalived.conf"
+       dest: "/etc/keepalived/keepalived.conf"
        owner: root
        group: root
        mode: 0644
